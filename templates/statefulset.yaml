@@ -402,17 +402,15 @@ spec:
 {{- end }}
 {{- if .Values.properties.isNode }}
         readinessProbe:
-{{- if not .Values.sts.startupProbe.enabled  }}
-          initialDelaySeconds: 60
-{{- end }}
-          periodSeconds: 20
-          tcpSocket:
+          httpGet:
+            path: /nifi-api/flow/cluster/summary
             port: {{ .Values.properties.httpsPort }}
-#           exec:
-#             command:
-#             - bash
-#             - -c
-#             - |
+            scheme: HTTPS
+          initialDelaySeconds: 180
+          periodSeconds: 20
+          timeoutSeconds: 5
+          failureThreshold: 10
+{{- end }}
 # {{- if .Values.properties.httpsPort }}
 #               curl -kv \
 #                 --cert ${NIFI_HOME}/config-data/certs/admin/crt.pem --cert-type PEM \
