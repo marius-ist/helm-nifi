@@ -252,7 +252,16 @@ spec:
 
 {{- /* if .Values.certManager.enabled */}}{{ else }}
 
-          echo "Skipping TLS Toolkit setup as NiFi 2.2.0 no longer includes it."
+          if [ ! -r "${NIFI_HOME}/conf/nifi-cert.pem" ]
+          then
+            /opt/nifi/nifi-toolkit-current/bin/tls-toolkit.sh standalone \
+              -n '{{.Release.Name}}-nifi-0.{{.Release.Name}}-nifi-headless.{{.Release.Namespace}}.svc.cluster.local' \
+              -C '{{.Values.auth.admin}}' \
+              -o "${NIFI_HOME}/conf/" \
+              -P {{.Values.auth.SSL.truststorePasswd}} \
+              -S {{.Values.auth.SSL.keystorePasswd}} \
+              --nifiPropertiesFile /opt/nifi/nifi-current/conf/nifi.properties
+          fi
 
 {{- /* if .Values.certManager.enabled */}}{{ end }}
 
@@ -402,15 +411,17 @@ spec:
 {{- end }}
 {{- if .Values.properties.isNode }}
         readinessProbe:
-          httpGet:
-            path: /nifi-api/flow/cluster/summary
-            port: {{ .Values.properties.httpsPort }}
-            scheme: HTTPS
-          initialDelaySeconds: 180
-          periodSeconds: 20
-          timeoutSeconds: 5
-          failureThreshold: 10
+{{- if not .Values.sts.startupProbe.enabled  }}
+          initialDelaySeconds: 60
 {{- end }}
+          periodSeconds: 20
+          tcpSocket:
+            port: {{ .Values.properties.httpsPort }}
+#           exec:
+#             command:
+#             - bash
+#             - -c
+#             - |
 # {{- if .Values.properties.httpsPort }}
 #               curl -kv \
 #                 --cert ${NIFI_HOME}/config-data/certs/admin/crt.pem --cert-type PEM \
